@@ -3,22 +3,15 @@ package com.fatmanur.ecommerce.auth.service;
 import com.fatmanur.ecommerce.auth.dto.RegisterRequest;
 import com.fatmanur.ecommerce.user.entity.User;
 import com.fatmanur.ecommerce.user.repository.UserRepository;
+import lombok.AllArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.fatmanur.ecommerce.user.entity.User;
 
 @Service
+@AllArgsConstructor
 public class AuthService {
-    //Cunsractors
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-
-    public AuthService(UserRepository userRepository ,
-                       PasswordEncoder passwordEncoder){
-
-        this.userRepository=userRepository;
-        this.passwordEncoder=passwordEncoder;
-    }
 
     public void register(RegisterRequest request){
         if (userRepository.existsByEmail(request.email())){
