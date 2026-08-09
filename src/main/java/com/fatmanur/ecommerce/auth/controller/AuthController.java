@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
     private final AuthService authService;
 
+    public AuthController(AuthService authService){
+        this.authService=authService;
+    }
+
     @PostMapping("/auth/register")
     public ResponseEntity<String> register(
             @Valid @RequestBody RegisterRequest request) { //RequestBody=It converts the incoming JSON into a RegisterRequest object.
@@ -20,7 +24,4 @@ public class AuthController {
                 return ResponseEntity.ok("User registered successfully");
     }
 
-    public AuthController(AuthService authService){
-        this.authService=authService;
-    }
 }
