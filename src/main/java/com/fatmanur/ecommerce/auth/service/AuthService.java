@@ -1,6 +1,11 @@
 package com.fatmanur.ecommerce.auth.service;
 
+import com.fatmanur.ecommerce.auth.dto.LoginRequest;
+import com.fatmanur.ecommerce.auth.dto.LoginResponse;
 import com.fatmanur.ecommerce.auth.dto.RegisterRequest;
+import com.fatmanur.ecommerce.auth.exception.EmailAlreadyExistsException;
+import com.fatmanur.ecommerce.auth.exception.InvalidCredentialsException;
+import com.fatmanur.ecommerce.auth.security.JwtUtil;
 import com.fatmanur.ecommerce.user.entity.User;
 import com.fatmanur.ecommerce.user.repository.UserRepository;
 import lombok.AllArgsConstructor;
@@ -12,14 +17,14 @@ import org.springframework.stereotype.Service;
 public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
-    public void register(RegisterRequest request){
-        if (userRepository.existsByEmail(request.email())){
-            throw new RuntimeException("Email already registered");  //The process is halted if the email is registered.
+    public void register(RegisterRequest request) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw new EmailAlreadyExistsException("Email already registered");
         }
 
-        String encodedPassword = passwordEncoder.encode(request.password()); //It is hashed with BCrypt
-
+        String encodedPassword = passwordEncoder.encode(request.password());
 
         User user = User.builder()
                 .email(request.email())
@@ -29,4 +34,16 @@ public class AuthService {
         userRepository.save(user);
     }
 
+    public LoginResponse login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
+
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
+
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+
+        return new LoginResponse(token, user.getEmail(), user.getRole().name());
+    }
 }
