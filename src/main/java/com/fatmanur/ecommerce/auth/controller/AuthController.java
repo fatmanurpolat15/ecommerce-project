@@ -11,6 +11,7 @@ import com.fatmanur.ecommerce.user.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,5 +50,11 @@ public class AuthController {
                 user.getEmail(),
                 user.getName(),
                 user.getRole().name()));
+    }
+
+    @GetMapping("/admin/dashboard")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> adminDashboard() {
+        return ResponseEntity.ok("Welcome to admin dashboard");
     }
 }
