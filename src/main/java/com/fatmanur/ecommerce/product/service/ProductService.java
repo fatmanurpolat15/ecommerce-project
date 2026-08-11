@@ -8,9 +8,11 @@ import com.fatmanur.ecommerce.product.entity.Product;
 import com.fatmanur.ecommerce.product.exception.ProductNotFoundException;
 import com.fatmanur.ecommerce.product.repository.ProductRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.math.BigDecimal;
 
 @Service
 @AllArgsConstructor
@@ -34,10 +36,23 @@ public class ProductService {
         return toResponse(saved);
     }
 
-    public List<ProductResponse> getAll() {
-        return productRepository.findAll().stream()
-                .map(this::toResponse)
-                .toList();
+    public Page<ProductResponse> getAll(Pageable pageable, Long categoryId, String keyword, BigDecimal minPrice, BigDecimal maxPrice) {
+        if (categoryId != null && keyword != null && minPrice != null && maxPrice != null) {
+            return productRepository.findByCategoryIdAndNameContainingIgnoreCaseAndPriceBetween(categoryId, keyword, minPrice, maxPrice, pageable).map(this::toResponse);
+        } else if (categoryId != null && keyword != null) {
+            return productRepository.findByCategoryIdAndNameContainingIgnoreCase(categoryId, keyword, pageable).map(this::toResponse);
+        } else if (categoryId != null && minPrice != null && maxPrice != null) {
+            return productRepository.findByCategoryIdAndPriceBetween(categoryId, minPrice, maxPrice, pageable).map(this::toResponse);
+        } else if (keyword != null && minPrice != null && maxPrice != null) {
+            return productRepository.findByNameContainingIgnoreCaseAndPriceBetween(keyword, minPrice, maxPrice, pageable).map(this::toResponse);
+        } else if (categoryId != null) {
+            return productRepository.findByCategoryId(categoryId, pageable).map(this::toResponse);
+        } else if (keyword != null) {
+            return productRepository.findByNameContainingIgnoreCase(keyword, pageable).map(this::toResponse);
+        } else if (minPrice != null && maxPrice != null) {
+            return productRepository.findByPriceBetween(minPrice, maxPrice, pageable).map(this::toResponse);
+        }
+        return productRepository.findAll(pageable).map(this::toResponse);
     }
 
     public ProductResponse getById(Long id) {
