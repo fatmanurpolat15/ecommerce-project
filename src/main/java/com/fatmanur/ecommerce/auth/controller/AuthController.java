@@ -2,7 +2,7 @@ package com.fatmanur.ecommerce.auth.controller;
 
 import com.fatmanur.ecommerce.auth.dto.LoginRequest;
 import com.fatmanur.ecommerce.auth.dto.LoginResponse;
-import com.fatmanur.ecommerce.auth.dto.MeResponse;
+import com.fatmanur.ecommerce.auth.dto.UserResponse;
 import com.fatmanur.ecommerce.auth.dto.RegisterRequest;
 import com.fatmanur.ecommerce.auth.exception.UserNotFoundException;
 import com.fatmanur.ecommerce.auth.service.AuthService;
@@ -13,7 +13,9 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -41,20 +43,27 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<MeResponse> me(Authentication authentication) {
+    public ResponseEntity<UserResponse> me(Authentication authentication) {
         String email = authentication.getName();
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailAndDeletedFalse(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
-        return ResponseEntity.ok(new MeResponse(
+        return ResponseEntity.ok(new UserResponse(
                 user.getId(),
                 user.getEmail(),
                 user.getName(),
-                user.getRole().name()));
+                user.getRole()));
     }
 
     @GetMapping("/admin/dashboard")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> adminDashboard() {
         return ResponseEntity.ok("Welcome to admin dashboard");
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> deleteUser(@PathVariable Long id) {
+        authService.deleteUser(id);
+        return ResponseEntity.ok("User deleted successfully");
     }
 }

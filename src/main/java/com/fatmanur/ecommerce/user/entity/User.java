@@ -1,5 +1,6 @@
 package com.fatmanur.ecommerce.user.entity;
 
+import com.fatmanur.ecommerce.user.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -29,4 +30,8 @@ public class User {
     @Column(nullable = false)
     @Builder.Default
     private Role role = Role.CUSTOMER;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean deleted = false;
 }

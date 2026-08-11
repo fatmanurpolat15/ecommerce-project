@@ -5,6 +5,7 @@ import com.fatmanur.ecommerce.auth.dto.LoginResponse;
 import com.fatmanur.ecommerce.auth.dto.RegisterRequest;
 import com.fatmanur.ecommerce.auth.exception.EmailAlreadyExistsException;
 import com.fatmanur.ecommerce.auth.exception.InvalidCredentialsException;
+import com.fatmanur.ecommerce.auth.exception.UserNotFoundException;
 import com.fatmanur.ecommerce.auth.security.JwtUtil;
 import com.fatmanur.ecommerce.user.entity.User;
 import com.fatmanur.ecommerce.user.repository.UserRepository;
@@ -35,7 +36,7 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByEmailAndDeletedFalse(request.email())
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
@@ -44,6 +45,13 @@ public class AuthService {
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
 
-        return new LoginResponse(token, user.getEmail(), user.getRole().name());
+        return new LoginResponse(token, user.getEmail(), user.getRole());
+    }
+
+    public void deleteUser(Long id) {
+        User user = userRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        user.setDeleted(true);
+        userRepository.save(user);
     }
 }
