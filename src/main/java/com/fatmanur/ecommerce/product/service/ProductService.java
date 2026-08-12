@@ -36,30 +36,6 @@ public class ProductService {
         return toResponse(saved);
     }
 
-    public Page<ProductResponse> getAll(Pageable pageable, Long categoryId, String keyword, BigDecimal minPrice, BigDecimal maxPrice) {
-        if (categoryId != null && keyword != null && minPrice != null && maxPrice != null) {
-            return productRepository.findAllByCategoryIdAndNameContainingIgnoreCaseAndPriceBetweenAndDeletedFalse(categoryId, keyword, minPrice, maxPrice, pageable).map(this::toResponse);
-        }
-        if (categoryId != null && keyword != null) {
-            return productRepository.findAllByCategoryIdAndNameContainingIgnoreCaseAndDeletedFalse(categoryId, keyword, pageable).map(this::toResponse);
-        }
-        if (categoryId != null && minPrice != null && maxPrice != null) {
-            return productRepository.findAllByCategoryIdAndPriceBetweenAndDeletedFalse(categoryId, minPrice, maxPrice, pageable).map(this::toResponse);
-        }
-        if (keyword != null && minPrice != null && maxPrice != null) {
-            return productRepository.findAllByNameContainingIgnoreCaseAndPriceBetweenAndDeletedFalse(keyword, minPrice, maxPrice, pageable).map(this::toResponse);
-        }
-        if (categoryId != null) {
-            return productRepository.findAllByCategoryIdAndDeletedFalse(categoryId, pageable).map(this::toResponse);
-        }
-        if (keyword != null) {
-            return productRepository.findAllByNameContainingIgnoreCaseAndDeletedFalse(keyword, pageable).map(this::toResponse);
-        }
-        if (minPrice != null && maxPrice != null) {
-            return productRepository.findAllByPriceBetweenAndDeletedFalse(minPrice, maxPrice, pageable).map(this::toResponse);
-        }
-        return productRepository.findAllByDeletedFalse(pageable).map(this::toResponse);
-    }
 
     public ProductResponse getById(Long id) {
         Product product = productRepository.findByIdAndDeletedFalse(id)
