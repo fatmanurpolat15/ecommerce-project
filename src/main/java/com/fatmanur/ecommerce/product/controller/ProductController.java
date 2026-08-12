@@ -6,8 +6,9 @@ import com.fatmanur.ecommerce.product.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -34,14 +35,18 @@ public class ProductController {
     @GetMapping("/category/{categoryId}")
     public ResponseEntity<Page<ProductResponse>> getByCategoryId(
             @PathVariable Long categoryId,
-            @PageableDefault(page = 0, size = 10) Pageable pageable) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         return ResponseEntity.ok(productService.getByCategoryId(categoryId, pageable));
     }
 
     @GetMapping("/search")
     public ResponseEntity<Page<ProductResponse>> searchByKeyword(
             @RequestParam String keyword,
-            @PageableDefault(page = 0, size = 10) Pageable pageable) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         return ResponseEntity.ok(productService.searchByKeyword(keyword, pageable));
     }
 
@@ -49,7 +54,9 @@ public class ProductController {
     public ResponseEntity<Page<ProductResponse>> getByPriceRange(
             @RequestParam BigDecimal minPrice,
             @RequestParam BigDecimal maxPrice,
-            @PageableDefault(page = 0, size = 10) Pageable pageable) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         return ResponseEntity.ok(productService.getByPriceRange(minPrice, maxPrice, pageable));
     }
 
