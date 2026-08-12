@@ -9,5 +9,6 @@ public record ProductResponse(
         BigDecimal price,
         String currency,
         String imageUrl,
-        String categoryName
+        String categoryName,
+        Boolean active
 ) {}

@@ -41,4 +41,8 @@ public class Product {
     @Builder.Default
     @Column(nullable = false)
     private boolean deleted = false;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean active = false;
 }

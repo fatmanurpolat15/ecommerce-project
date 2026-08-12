@@ -10,5 +10,6 @@ public record ProductRequest(
         @NotNull BigDecimal price,
         String currency,
         String imageUrl,
-        @NotNull Long categoryId
+        @NotNull Long categoryId,
+        Boolean active
 ) {}
