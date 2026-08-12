@@ -37,4 +37,8 @@ public class Product {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean deleted = false;
 }

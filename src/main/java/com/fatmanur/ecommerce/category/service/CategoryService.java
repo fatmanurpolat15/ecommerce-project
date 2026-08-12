@@ -29,9 +29,30 @@ public class CategoryService {
     }
 
     public List<CategoryResponse> getAll() {
-        return categoryRepository.findAll().stream()
+        return categoryRepository.findByDeletedFalse().stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    public CategoryResponse getById(Long id) {
+        Category category = categoryRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
+        return toResponse(category);
+    }
+    public CategoryResponse update(Long id, CategoryRequest request) {
+        Category category = categoryRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
+        category.setName(request.name());
+        category.setDescription(request.description());
+        Category updated = categoryRepository.save(category);
+        return toResponse(updated);
+    }
+
+    public void delete(Long id) {
+        Category category = categoryRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
+        category.setDeleted(true);
+        categoryRepository.save(category);
     }
 
     private CategoryResponse toResponse(Category category) {
