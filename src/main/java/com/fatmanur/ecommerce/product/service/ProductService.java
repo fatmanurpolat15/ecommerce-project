@@ -21,7 +21,7 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
 
     public ProductResponse create(ProductRequest request) {
-        var category = categoryRepository.findById(request.categoryId())
+        var category = categoryRepository.findByIdAndDeletedFalse(request.categoryId())
                 .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
 
         Product product = Product.builder()
@@ -36,36 +36,30 @@ public class ProductService {
         return toResponse(saved);
     }
 
-    public Page<ProductResponse> getAll(Pageable pageable, Long categoryId, String keyword, BigDecimal minPrice, BigDecimal maxPrice) {
-        if (categoryId != null && keyword != null && minPrice != null && maxPrice != null) {
-            return productRepository.findByCategoryIdAndNameContainingIgnoreCaseAndPriceBetween(categoryId, keyword, minPrice, maxPrice, pageable).map(this::toResponse);
-        } else if (categoryId != null && keyword != null) {
-            return productRepository.findByCategoryIdAndNameContainingIgnoreCase(categoryId, keyword, pageable).map(this::toResponse);
-        } else if (categoryId != null && minPrice != null && maxPrice != null) {
-            return productRepository.findByCategoryIdAndPriceBetween(categoryId, minPrice, maxPrice, pageable).map(this::toResponse);
-        } else if (keyword != null && minPrice != null && maxPrice != null) {
-            return productRepository.findByNameContainingIgnoreCaseAndPriceBetween(keyword, minPrice, maxPrice, pageable).map(this::toResponse);
-        } else if (categoryId != null) {
-            return productRepository.findByCategoryId(categoryId, pageable).map(this::toResponse);
-        } else if (keyword != null) {
-            return productRepository.findByNameContainingIgnoreCase(keyword, pageable).map(this::toResponse);
-        } else if (minPrice != null && maxPrice != null) {
-            return productRepository.findByPriceBetween(minPrice, maxPrice, pageable).map(this::toResponse);
-        }
-        return productRepository.findAll(pageable).map(this::toResponse);
-    }
 
     public ProductResponse getById(Long id) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
         return toResponse(product);
     }
 
+    public Page<ProductResponse> getByCategoryId(Long categoryId, Pageable pageable) {
+        return productRepository.findAllByCategoryIdAndDeletedFalse(categoryId, pageable).map(this::toResponse);
+    }
+
+    public Page<ProductResponse> searchByKeyword(String keyword, Pageable pageable) {
+        return productRepository.findAllByNameContainingIgnoreCaseAndDeletedFalse(keyword, pageable).map(this::toResponse);
+    }
+
+    public Page<ProductResponse> getByPriceRange(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
+        return productRepository.findAllByPriceBetweenAndDeletedFalse(minPrice, maxPrice, pageable).map(this::toResponse);
+    }
+
     public ProductResponse update(Long id, ProductRequest request) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
-        var category = categoryRepository.findById(request.categoryId())
+        var category = categoryRepository.findByIdAndDeletedFalse(request.categoryId())
                 .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
 
         product.setName(request.name());
@@ -77,6 +71,13 @@ public class ProductService {
 
         Product saved = productRepository.save(product);
         return toResponse(saved);
+    }
+
+    public void delete(Long id) {
+        Product product = productRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        product.setDeleted(true);
+        productRepository.save(product);
     }
 
     private ProductResponse toResponse(Product product) {
