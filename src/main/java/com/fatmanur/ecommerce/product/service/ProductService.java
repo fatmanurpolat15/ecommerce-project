@@ -80,6 +80,14 @@ public class ProductService {
         productRepository.save(product);
     }
 
+    public ProductResponse toggleActive(Long id) {
+        Product product = productRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        product.setActive(!product.isActive());
+        productRepository.save(product);
+        return toResponse(product);
+    }
+
     private ProductResponse toResponse(Product product) {
         return new ProductResponse(
                 product.getId(),
@@ -88,6 +96,7 @@ public class ProductService {
                 product.getPrice(),
                 product.getCurrency(),
                 product.getImageUrl(),
-                product.getCategory().getName());
+                product.getCategory().getName(),
+                product.isActive());
     }
 }

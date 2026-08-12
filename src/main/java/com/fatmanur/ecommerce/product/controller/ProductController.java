@@ -72,4 +72,10 @@ public class ProductController {
         productService.delete(id);
         return ResponseEntity.ok("Product deleted successfully");
     }
+
+    @PatchMapping("/{id}/active")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ProductResponse> toggleActive(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.toggleActive(id));
+    }
 }
