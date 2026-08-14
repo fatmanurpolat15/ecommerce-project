@@ -1,5 +1,6 @@
 package com.fatmanur.ecommerce.product.dto;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 public record ProductResponse(
@@ -11,4 +12,4 @@ public record ProductResponse(
         String imageUrl,
         String categoryName,
         Boolean active
-) {}
+) implements Serializable {}

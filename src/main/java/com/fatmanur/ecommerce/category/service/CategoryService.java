@@ -7,6 +7,8 @@ import com.fatmanur.ecommerce.category.exception.CategoryAlreadyExistsException;
 import com.fatmanur.ecommerce.category.exception.CategoryNotFoundException;
 import com.fatmanur.ecommerce.category.repository.CategoryRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -28,17 +30,21 @@ public class CategoryService {
         return toResponse(saved);
     }
 
+    @Cacheable(value = "categories")
     public List<CategoryResponse> getAll() {
         return categoryRepository.findByDeletedFalse().stream()
                 .map(this::toResponse)
                 .toList();
     }
 
+    @Cacheable(value = "categories", key = "#id")
     public CategoryResponse getById(Long id) {
         Category category = categoryRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
         return toResponse(category);
     }
+
+    @CacheEvict(value = "categories", key = "#id")
     public CategoryResponse update(Long id, CategoryRequest request) {
         Category category = categoryRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
@@ -48,6 +54,7 @@ public class CategoryService {
         return toResponse(updated);
     }
 
+    @CacheEvict(value = "categories", key = "#id")
     public void delete(Long id) {
         Category category = categoryRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new CategoryNotFoundException("Category not found"));

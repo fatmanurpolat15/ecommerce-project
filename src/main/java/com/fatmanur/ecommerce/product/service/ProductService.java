@@ -12,6 +12,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+
+
 import java.math.BigDecimal;
 
 @Service
@@ -37,6 +41,7 @@ public class ProductService {
     }
 
 
+    @Cacheable(value = "products" , key = "#id")
     public ProductResponse getById(Long id) {
         Product product = productRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
@@ -55,6 +60,7 @@ public class ProductService {
         return productRepository.findAllByPriceBetweenAndDeletedFalse(minPrice, maxPrice, pageable).map(this::toResponse);
     }
 
+    @CacheEvict(value = "products", key = "#id")
     public ProductResponse update(Long id, ProductRequest request) {
         Product product = productRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
@@ -73,6 +79,7 @@ public class ProductService {
         return toResponse(saved);
     }
 
+    @CacheEvict(value = "products", key = "#id")
     public void delete(Long id) {
         Product product = productRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
@@ -80,6 +87,7 @@ public class ProductService {
         productRepository.save(product);
     }
 
+    @CacheEvict(value = "products", key = "#id")
     public ProductResponse toggleActive(Long id) {
         Product product = productRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
