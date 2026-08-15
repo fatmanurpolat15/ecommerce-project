@@ -24,7 +24,21 @@ public class StockController {
     @PutMapping("/{productId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<StockResponse> adjust(@PathVariable Long productId,
-                                                 @Valid @RequestBody StockRequest request) {
+                                                @Valid @RequestBody StockRequest request) {
         return ResponseEntity.ok(stockService.adjust(productId, request));
+    }
+
+    @PostMapping("/{productId}/reserve")
+    public ResponseEntity<Void> reserveStock(@PathVariable Long productId,
+                                             @RequestParam int quantity) {
+        stockService.reserveStock(productId, quantity);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{productId}/release")
+    public ResponseEntity<Void> releaseStock(@PathVariable Long productId,
+                                             @RequestParam int quantity) {
+        stockService.releaseStock(productId, quantity);
+        return ResponseEntity.ok().build();
     }
 }

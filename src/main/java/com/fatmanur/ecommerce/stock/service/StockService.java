@@ -8,6 +8,7 @@ import com.fatmanur.ecommerce.stock.dto.StockResponse;
 import com.fatmanur.ecommerce.stock.entity.Inventory;
 import com.fatmanur.ecommerce.stock.exception.StockNotFoundException;
 import com.fatmanur.ecommerce.stock.repository.InventoryRepository;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -52,5 +53,33 @@ public class StockService {
                 inventory.getAvailableQuantity(),
                 inventory.getReservedQuantity()
         );
+    }
+
+    @Transactional
+    public void reserveStock(Long productId, int quantity) {
+        Inventory inventory = inventoryRepository.findByProductId(productId)
+                .orElseThrow(() -> new StockNotFoundException("Stock not found for product: " + productId));
+
+        if (inventory.getAvailableQuantity() < quantity) {
+            throw new IllegalArgumentException("Not enough stock available to reserve");
+        }
+
+        inventory.setAvailableQuantity(inventory.getAvailableQuantity() - quantity);
+        inventory.setReservedQuantity(inventory.getReservedQuantity() + quantity);
+        inventoryRepository.save(inventory);
+    }
+
+    @Transactional
+    public void releaseStock(Long productId, int quantity) {
+        Inventory inventory = inventoryRepository.findByProductId(productId)
+                .orElseThrow(() -> new StockNotFoundException("Stock not found for product: " + productId));
+
+        if (inventory.getReservedQuantity() < quantity) {
+            throw new IllegalArgumentException("Not enough stock reserved to release");
+        }
+
+        inventory.setAvailableQuantity(inventory.getAvailableQuantity() + quantity);
+        inventory.setReservedQuantity(inventory.getReservedQuantity() - quantity);
+        inventoryRepository.save(inventory);
     }
 }
