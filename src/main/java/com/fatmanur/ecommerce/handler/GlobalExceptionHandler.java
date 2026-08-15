@@ -7,6 +7,7 @@ import com.fatmanur.ecommerce.auth.exception.UserNotFoundException;
 import com.fatmanur.ecommerce.category.exception.CategoryAlreadyExistsException;
 import com.fatmanur.ecommerce.category.exception.CategoryNotFoundException;
 import com.fatmanur.ecommerce.product.exception.ProductNotFoundException;
+import com.fatmanur.ecommerce.stock.exception.StockNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -77,6 +78,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
+    @ExceptionHandler(StockNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleStockNotFound(StockNotFoundException ex) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                ex.getMessage(),
+                LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
         ErrorResponse error = new ErrorResponse(
@@ -106,5 +116,7 @@ public class GlobalExceptionHandler {
                 "An unexpected error occurred",
                 LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+
+
     }
 }
