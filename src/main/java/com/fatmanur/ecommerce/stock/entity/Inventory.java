@@ -26,4 +26,7 @@ public class Inventory {
 
     @Column(nullable = false)
     private int reservedQuantity;
+
+    @Version
+    private int version;
 }

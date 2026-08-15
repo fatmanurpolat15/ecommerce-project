@@ -6,6 +6,7 @@ import com.fatmanur.ecommerce.product.repository.ProductRepository;
 import com.fatmanur.ecommerce.stock.dto.StockRequest;
 import com.fatmanur.ecommerce.stock.dto.StockResponse;
 import com.fatmanur.ecommerce.stock.entity.Inventory;
+import com.fatmanur.ecommerce.stock.exception.InsufficientStockException;
 import com.fatmanur.ecommerce.stock.exception.StockNotFoundException;
 import com.fatmanur.ecommerce.stock.repository.InventoryRepository;
 import jakarta.transaction.Transactional;
@@ -54,14 +55,14 @@ public class StockService {
                 inventory.getReservedQuantity()
         );
     }
-
+    @CacheEvict(value = "stocks", key = "#productId")
     @Transactional
     public void reserveStock(Long productId, int quantity) {
         Inventory inventory = inventoryRepository.findByProductId(productId)
                 .orElseThrow(() -> new StockNotFoundException("Stock not found for product: " + productId));
 
         if (inventory.getAvailableQuantity() < quantity) {
-            throw new IllegalArgumentException("Not enough stock available to reserve");
+            throw new InsufficientStockException("Not enough stock available to reserve");
         }
 
         inventory.setAvailableQuantity(inventory.getAvailableQuantity() - quantity);
@@ -69,13 +70,14 @@ public class StockService {
         inventoryRepository.save(inventory);
     }
 
+    @CacheEvict(value = "stocks", key = "#productId")
     @Transactional
     public void releaseStock(Long productId, int quantity) {
         Inventory inventory = inventoryRepository.findByProductId(productId)
                 .orElseThrow(() -> new StockNotFoundException("Stock not found for product: " + productId));
 
         if (inventory.getReservedQuantity() < quantity) {
-            throw new IllegalArgumentException("Not enough stock reserved to release");
+            throw new InsufficientStockException("Not enough stock available to release");
         }
 
         inventory.setAvailableQuantity(inventory.getAvailableQuantity() + quantity);
