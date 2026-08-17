@@ -15,8 +15,9 @@ import java.util.Map;
 public class CartService {
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private static final String CART_PREFIX = "cart:";
     private final ProductRepository productRepository;
+    private static final String CART_PREFIX = "cart:";
+    private static final long  CART_TTL_DAYS = 7;
 
     public CartResponse getCart(Long userId) {
         Map<Object, Object> entries = redisTemplate.opsForHash().entries(CART_PREFIX + userId);
@@ -40,6 +41,7 @@ public class CartService {
             }
         }
 
+        redisTemplate.expire(CART_PREFIX + userId, java.time.Duration.ofDays(CART_TTL_DAYS));
         return new CartResponse(items, totalPrice);
     }
 
@@ -50,6 +52,7 @@ public class CartService {
                 .orElse(false);
         if (isProductValid) {
             redisTemplate.opsForHash().put(CART_PREFIX + userId, item.productId().toString(), item);
+            redisTemplate.expire(CART_PREFIX + userId, java.time.Duration.ofDays(CART_TTL_DAYS));
         }
     }
 
@@ -59,10 +62,12 @@ public class CartService {
         if (item != null) {
             CartItem updated = new CartItem(item.productId(), item.name(), item.price(), quantity);
             redisTemplate.opsForHash().put(key, productId.toString(), updated);
+            redisTemplate.expire(key, java.time.Duration.ofDays(CART_TTL_DAYS));
         }
     }
 
     public void removeItem(Long userId, Long productId) {
         redisTemplate.opsForHash().delete(CART_PREFIX + userId, productId.toString());
+        redisTemplate.expire(CART_PREFIX + userId, java.time.Duration.ofDays(CART_TTL_DAYS));
     }
 }
