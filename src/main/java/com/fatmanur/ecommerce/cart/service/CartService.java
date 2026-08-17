@@ -2,6 +2,7 @@ package com.fatmanur.ecommerce.cart.service;
 
 import com.fatmanur.ecommerce.cart.dto.CartItem;
 import com.fatmanur.ecommerce.cart.dto.CartResponse;
+import com.fatmanur.ecommerce.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ public class CartService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private static final String CART_PREFIX = "cart:";
+    private final ProductRepository productRepository;
 
     public CartResponse getCart(Long userId) {
         Map<Object, Object> entries = redisTemplate.opsForHash().entries(CART_PREFIX + userId);
@@ -23,8 +25,18 @@ public class CartService {
 
         for (Map.Entry<Object, Object> entry : entries.entrySet()) {
             if (entry.getValue() instanceof CartItem item) {
-                items.put(Long.parseLong(entry.getKey().toString()), item);
-                totalPrice += item.price() * item.quantity();
+                boolean isProductValid = productRepository
+                        .findByIdAndDeletedFalse(item.productId())
+                        .map(product -> product.isActive())
+                        .orElse(false);
+
+                if (isProductValid) {
+                    items.put(item.productId(), item);
+                    totalPrice += item.price() * item.quantity();
+
+                } else {
+                    redisTemplate.opsForHash().delete(CART_PREFIX + userId, item.productId().toString());
+                }
             }
         }
 
@@ -32,7 +44,13 @@ public class CartService {
     }
 
     public void addItem(Long userId, CartItem item) {
-        redisTemplate.opsForHash().put(CART_PREFIX + userId, item.productId().toString(), item);
+        boolean isProductValid = productRepository
+                .findByIdAndDeletedFalse(item.productId())
+                .map(product -> product.isActive())
+                .orElse(false);
+        if (isProductValid) {
+            redisTemplate.opsForHash().put(CART_PREFIX + userId, item.productId().toString(), item);
+        }
     }
 
     public void updateQuantity(Long userId, Long productId, int quantity) {
