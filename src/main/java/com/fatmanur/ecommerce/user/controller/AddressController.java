@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/addresses")
+@RequestMapping("${api.base-uri}/addresses")
 @RequiredArgsConstructor
 public class AddressController {
 
@@ -48,6 +48,13 @@ public class AddressController {
         Long userId = getUserId(user);
         addressService.deleteAddress(userId, addressId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{addressId}/default")
+    public ResponseEntity<AddressResponse> setDefault(@AuthenticationPrincipal UserDetails user,
+                                                      @PathVariable Long addressId) {
+        Long userId = getUserId(user);
+        return ResponseEntity.ok(addressService.setDefault(userId, addressId));
     }
 
     private Long getUserId(UserDetails user) {

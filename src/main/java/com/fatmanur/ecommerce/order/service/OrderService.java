@@ -54,7 +54,6 @@ public class OrderService {
                 .orderNumber(generateOrderNumber())
                 .userAddress(address)
                 .totalPrice(BigDecimal.valueOf(cart.totalPrice()))
-                .status("CREATED")
                 .build();
 
         for (var entry : cart.items().entrySet()) {

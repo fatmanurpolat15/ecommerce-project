@@ -61,6 +61,20 @@ public class AddressService {
         addressRepository.save(address);
     }
 
+    public AddressResponse setDefault(Long userId, Long addressId) {
+        UserAddress address = addressRepository.findByIdAndUserIdAndDeletedFalse(addressId, userId)
+                .orElseThrow(() -> new UserNotFoundException("Address not found"));
+
+        addressRepository.findByUserIdAndDeletedFalse(userId).stream()
+                .filter(UserAddress::isDefault)
+                .forEach(a -> a.setDefault(false));
+
+        address.setDefault(true);
+        addressRepository.save(address);
+
+        return toResponse(address);
+    }
+
     private AddressResponse toResponse(UserAddress address) {
         return new AddressResponse(
                 address.getId(),
