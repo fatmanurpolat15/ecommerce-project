@@ -4,6 +4,9 @@ import com.fatmanur.ecommerce.user.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -34,4 +37,8 @@ public class User {
     @Builder.Default
     @Column(nullable = false)
     private boolean deleted = false;
+
+    @OneToMany(mappedBy = "user", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @Builder.Default
+    private List<UserAddress> addresses = new ArrayList<>();
 }

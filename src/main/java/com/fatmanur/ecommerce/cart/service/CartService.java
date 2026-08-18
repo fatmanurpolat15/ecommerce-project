@@ -78,4 +78,8 @@ public class CartService {
         redisTemplate.opsForHash().delete(key, productId.toString());
         redisTemplate.expire(key, CART_TTL);
     }
+
+    public void clearCart(Long userId) {
+        redisTemplate.delete(CART_PREFIX + userId);
+    }
 }
