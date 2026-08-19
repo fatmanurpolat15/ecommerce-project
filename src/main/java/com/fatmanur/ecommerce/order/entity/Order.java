@@ -38,6 +38,7 @@ public class Order {
     @Column(nullable = false)
     private BigDecimal totalPrice;
 
+    @Builder.Default
     @Column(nullable = false)
     private String status=  "CREATED";
 

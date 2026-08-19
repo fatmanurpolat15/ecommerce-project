@@ -12,6 +12,7 @@ import com.fatmanur.ecommerce.order.repository.OrderRepository;
 import com.fatmanur.ecommerce.product.entity.Product;
 import com.fatmanur.ecommerce.product.exception.ProductNotFoundException;
 import com.fatmanur.ecommerce.product.repository.ProductRepository;
+import com.fatmanur.ecommerce.stock.service.StockService;
 import com.fatmanur.ecommerce.user.entity.User;
 import com.fatmanur.ecommerce.user.entity.UserAddress;
 import com.fatmanur.ecommerce.user.repository.UserRepository;
@@ -30,6 +31,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CartService cartService;
     private final ProductRepository productRepository;
+    private final StockService stockService;
     private final UserRepository userRepository;
 
     @Transactional
@@ -47,6 +49,11 @@ public class OrderService {
 
         if (cart.items().isEmpty()) {
             throw new ProductNotFoundException("Cart is empty");
+        }
+
+        for (var entry : cart.items().entrySet()) {
+            CartItem cartItem = entry.getValue();
+            stockService.reserveStock(cartItem.productId(), cartItem.quantity());
         }
 
         Order order = Order.builder()
