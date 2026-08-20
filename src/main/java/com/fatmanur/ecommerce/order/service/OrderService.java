@@ -7,6 +7,8 @@ import com.fatmanur.ecommerce.cart.service.CartService;
 import com.fatmanur.ecommerce.order.dto.OrderResponse;
 import com.fatmanur.ecommerce.order.entity.Order;
 import com.fatmanur.ecommerce.order.entity.OrderItem;
+import com.fatmanur.ecommerce.order.enums.OrderStatus;
+import com.fatmanur.ecommerce.order.exception.InvalidOrderStatusTransitionException;
 import com.fatmanur.ecommerce.order.exception.OrderNotFoundException;
 import com.fatmanur.ecommerce.order.repository.OrderRepository;
 import com.fatmanur.ecommerce.product.entity.Product;
@@ -22,6 +24,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -33,6 +37,14 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final StockService stockService;
     private final UserRepository userRepository;
+
+    private static final Map<OrderStatus , Set<OrderStatus>> ALLOWED_STATUS_TRANSITIONS = Map.of(
+            OrderStatus.CREATED, Set.of(OrderStatus.PAID, OrderStatus.CANCELLED),
+            OrderStatus.PAID, Set.of(OrderStatus.FULFILLED),
+            OrderStatus.FULFILLED, Set.of(),
+            OrderStatus.PAYMENT_FAILED, Set.of(OrderStatus.CANCELLED),
+            OrderStatus.CANCELLED, Set.of()
+    );
 
     @Transactional
     public OrderResponse checkout(Long userId) {
@@ -98,6 +110,21 @@ public class OrderService {
         return toResponse(order);
     }
 
+    @Transactional
+    public OrderResponse updateOrderStatus(Long orderId, OrderStatus newStatus) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order not found"));
+
+        OrderStatus currentStatus = order.getStatus();
+        if (!ALLOWED_STATUS_TRANSITIONS.getOrDefault(currentStatus, Set.of()).contains(newStatus)) {
+            throw new InvalidOrderStatusTransitionException(currentStatus.name(), newStatus.name());
+        }
+
+        order.setStatus(newStatus);
+
+        return toResponse(order);
+    }
+
     private OrderResponse toResponse(Order order) {
         String fullAddress = order.getUserAddress().getAddress() + ", " +
                 order.getUserAddress().getStreet() + ", " +
@@ -117,7 +144,7 @@ public class OrderService {
         return new OrderResponse(
                 order.getId(),
                 order.getOrderNumber(),
-                order.getStatus(),
+                order.getStatus().name(),
                 fullAddress,
                 items,
                 order.getTotalPrice(),

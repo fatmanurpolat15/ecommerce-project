@@ -2,10 +2,12 @@ package com.fatmanur.ecommerce.order.controller;
 
 import com.fatmanur.ecommerce.auth.exception.UserNotFoundException;
 import com.fatmanur.ecommerce.order.dto.OrderResponse;
+import com.fatmanur.ecommerce.order.dto.OrderStatusUpdateRequest;
 import com.fatmanur.ecommerce.order.service.OrderService;
 import com.fatmanur.ecommerce.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -45,4 +47,12 @@ public class OrderController {
                 .orElseThrow(() -> new UserNotFoundException("User not found"))
                 .getId();
     }
+
+    @PatchMapping("/{orderId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<OrderResponse> updateOrderStatus(@PathVariable Long orderId,
+                                                           @RequestBody OrderStatusUpdateRequest request) {
+        return ResponseEntity.ok(orderService.updateOrderStatus(orderId, request.status()));
+    }
+
 }
