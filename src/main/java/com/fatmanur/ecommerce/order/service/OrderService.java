@@ -7,6 +7,7 @@ import com.fatmanur.ecommerce.cart.service.CartService;
 import com.fatmanur.ecommerce.order.dto.OrderResponse;
 import com.fatmanur.ecommerce.order.entity.Order;
 import com.fatmanur.ecommerce.order.entity.OrderItem;
+import com.fatmanur.ecommerce.order.entity.OrderStatusHistory;
 import com.fatmanur.ecommerce.order.enums.OrderStatus;
 import com.fatmanur.ecommerce.order.exception.InvalidOrderStatusTransitionException;
 import com.fatmanur.ecommerce.order.exception.OrderNotFoundException;
@@ -23,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -120,6 +122,13 @@ public class OrderService {
             throw new InvalidOrderStatusTransitionException(currentStatus.name(), newStatus.name());
         }
 
+        OrderStatusHistory statusHistory = OrderStatusHistory.builder()
+                .order(order)
+                .previousStatus(currentStatus.name())
+                .newStatus(newStatus.name())
+                .changedAt(LocalDateTime.now())
+                .build();
+        order.getStatusHistory().add(statusHistory);
         order.setStatus(newStatus);
 
         return toResponse(order);
@@ -140,6 +149,13 @@ public class OrderService {
                         item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()))
                 ))
                 .toList();
+        List<OrderResponse.StatusTimeLineItem> statusTimeline = order.getStatusHistory().stream()
+                .map(history -> new OrderResponse.StatusTimeLineItem(
+                        history.getPreviousStatus(),
+                        history.getNewStatus(),
+                        history.getChangedAt()
+                ))
+                .toList();
 
         return new OrderResponse(
                 order.getId(),
@@ -148,7 +164,9 @@ public class OrderService {
                 fullAddress,
                 items,
                 order.getTotalPrice(),
-                order.getCreatedAt()
+                order.getCreatedAt(),
+                statusTimeline
+
         );
     }
 

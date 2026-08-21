@@ -11,7 +11,8 @@ public record OrderResponse(
     String shippingAddress,
     List<OrderItemResponse> items,
     BigDecimal totalPrice,
-    LocalDateTime createdAt
+    LocalDateTime createdAt,
+    List<StatusTimeLineItem> timeline
 ) {
 
     public record OrderItemResponse(
@@ -20,4 +21,11 @@ public record OrderResponse(
         int quantity,
         BigDecimal lineTotal
     ) {}
+
+    public record StatusTimeLineItem(
+            String fromStatus,
+            String toStatus,
+            LocalDateTime changedAt
+
+    ){}
 }

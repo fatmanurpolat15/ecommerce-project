@@ -48,6 +48,10 @@ public class Order {
     @Builder.Default
     private List<OrderItem> orderItems = new ArrayList<>();
 
+    @OneToMany(mappedBy = "order" , cascade = {CascadeType.PERSIST , CascadeType.MERGE})
+    @Builder.Default
+    private List<OrderStatusHistory> statusHistory = new ArrayList<>();
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
