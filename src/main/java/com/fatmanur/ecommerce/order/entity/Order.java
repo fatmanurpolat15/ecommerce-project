@@ -1,5 +1,6 @@
 package com.fatmanur.ecommerce.order.entity;
 
+import com.fatmanur.ecommerce.order.enums.OrderStatus;
 import com.fatmanur.ecommerce.user.entity.User;
 import com.fatmanur.ecommerce.user.entity.UserAddress;
 import jakarta.persistence.*;
@@ -39,8 +40,9 @@ public class Order {
     private BigDecimal totalPrice;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status=  "CREATED";
+    private OrderStatus status = OrderStatus.CREATED;
 
     @OneToMany(mappedBy = "order", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @Builder.Default
