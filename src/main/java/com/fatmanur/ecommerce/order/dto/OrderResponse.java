@@ -1,5 +1,7 @@
 package com.fatmanur.ecommerce.order.dto;
 
+import com.fatmanur.ecommerce.order.enums.OrderStatus;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,8 +25,8 @@ public record OrderResponse(
     ) {}
 
     public record StatusTimeLineItem(
-            String fromStatus,
-            String toStatus,
+            OrderStatus fromStatus,
+            OrderStatus toStatus,
             LocalDateTime changedAt
 
     ){}

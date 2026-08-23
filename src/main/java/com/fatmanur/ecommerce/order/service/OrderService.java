@@ -124,8 +124,8 @@ public class OrderService {
 
         OrderStatusHistory statusHistory = OrderStatusHistory.builder()
                 .order(order)
-                .previousStatus(currentStatus.name())
-                .newStatus(newStatus.name())
+                .previousStatus(currentStatus)
+                .newStatus(newStatus)
                 .changedAt(LocalDateTime.now())
                 .build();
         order.getStatusHistory().add(statusHistory);
