@@ -10,6 +10,7 @@ import com.fatmanur.ecommerce.order.entity.OrderItem;
 import com.fatmanur.ecommerce.order.entity.OrderStatusHistory;
 import com.fatmanur.ecommerce.order.enums.OrderStatus;
 import com.fatmanur.ecommerce.order.exception.InvalidOrderStatusTransitionException;
+import com.fatmanur.ecommerce.order.exception.OrderNotCancellableException;
 import com.fatmanur.ecommerce.order.exception.OrderNotFoundException;
 import com.fatmanur.ecommerce.order.repository.OrderRepository;
 import com.fatmanur.ecommerce.product.entity.Product;
@@ -130,6 +131,33 @@ public class OrderService {
                 .build();
         order.getStatusHistory().add(statusHistory);
         order.setStatus(newStatus);
+
+        return toResponse(order);
+    }
+
+    @Transactional
+    public OrderResponse cancelOrder(Long userId, Long orderId) {
+        Order order = orderRepository.findByIdAndUserId(orderId, userId)
+                .orElseThrow(() -> new OrderNotFoundException("Order not found"));
+
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new OrderNotCancellableException("Order cannot be cancelled in its current status: " + order.getStatus().name());
+        }
+
+        for (OrderItem item : order.getOrderItems()) {
+            stockService.releaseStock(item.getProduct().getId(), item.getQuantity());
+        }
+
+        OrderStatus previousStatus = order.getStatus();
+        order.setStatus(OrderStatus.CANCELLED);
+
+        OrderStatusHistory statusHistory = OrderStatusHistory.builder()
+                .order(order)
+                .previousStatus(previousStatus)
+                .newStatus(OrderStatus.CANCELLED)
+                .changedAt(LocalDateTime.now())
+                .build();
+        order.getStatusHistory().add(statusHistory);
 
         return toResponse(order);
     }
