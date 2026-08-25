@@ -13,6 +13,7 @@ import com.fatmanur.ecommerce.order.exception.InvalidOrderStatusTransitionExcept
 import com.fatmanur.ecommerce.order.exception.OrderNotCancellableException;
 import com.fatmanur.ecommerce.order.exception.OrderNotFoundException;
 import com.fatmanur.ecommerce.order.repository.OrderRepository;
+import com.fatmanur.ecommerce.transaction.service.TransactionService;
 import com.fatmanur.ecommerce.product.entity.Product;
 import com.fatmanur.ecommerce.product.exception.ProductNotFoundException;
 import com.fatmanur.ecommerce.product.repository.ProductRepository;
@@ -40,6 +41,7 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final StockService stockService;
     private final UserRepository userRepository;
+    private final TransactionService transactionService;
 
     private static final Map<OrderStatus , Set<OrderStatus>> ALLOWED_STATUS_TRANSITIONS = Map.of(
             OrderStatus.CREATED, Set.of(OrderStatus.PAID, OrderStatus.CANCELLED),
@@ -95,6 +97,7 @@ public class OrderService {
         }
 
         Order savedOrder = orderRepository.save(order);
+        transactionService.requestPayment(savedOrder);
         cartService.clearCart(userId);
 
         return toResponse(savedOrder);

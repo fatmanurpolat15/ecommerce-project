@@ -1,0 +1,108 @@
+package com.fatmanur.ecommerce.transaction.service;
+
+import com.fatmanur.ecommerce.order.entity.Order;
+import com.fatmanur.ecommerce.order.entity.OrderItem;
+import com.fatmanur.ecommerce.order.entity.OrderStatusHistory;
+import com.fatmanur.ecommerce.order.enums.OrderStatus;
+import com.fatmanur.ecommerce.order.exception.OrderNotFoundException;
+import com.fatmanur.ecommerce.order.repository.OrderRepository;
+import com.fatmanur.ecommerce.stock.service.StockService;
+import tools.jackson.databind.ObjectMapper;
+import com.fatmanur.ecommerce.transaction.dto.PaymentRequest;
+import com.fatmanur.ecommerce.transaction.dto.PaymentResult;
+import com.fatmanur.ecommerce.transaction.entity.Transaction;
+import com.fatmanur.ecommerce.transaction.enums.TransactionStatus;
+import com.fatmanur.ecommerce.transaction.repository.TransactionRepository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class TransactionService {
+
+    private final TransactionRepository transactionRepository;
+    private final OrderRepository orderRepository;
+    private final StockService stockService;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper objectMapper;
+
+    @Transactional
+    public void requestPayment(Order order) {
+        Transaction transaction = Transaction.builder()
+                .order(order)
+                .amount(order.getTotalPrice())
+                .status(TransactionStatus.CREATED)
+                .build();
+        transactionRepository.save(transaction);
+
+        PaymentRequest request = new PaymentRequest(
+                order.getId(),
+                order.getOrderNumber(),
+                order.getTotalPrice(),
+                order.getUser().getEmail()
+        );
+
+        try {
+            String json = objectMapper.writeValueAsString(request);
+            kafkaTemplate.send("payment.requests", order.getId().toString(), json);
+            log.info("Payment request sent to Kafka for order: {}", order.getOrderNumber());
+        } catch (Exception e) {
+            log.error("Failed to serialize payment request for order: {}", order.getOrderNumber(), e);
+        }
+    }
+
+    @Transactional
+    public void handlePaymentResult(PaymentResult result) {
+        Order order = orderRepository.findById(result.orderId())
+                .orElseThrow(() -> new OrderNotFoundException("Order not found"));
+
+        Transaction transaction = transactionRepository.findByOrderId(order.getId())
+                .orElseGet(() -> Transaction.builder()
+                        .order(order)
+                        .amount(order.getTotalPrice())
+                        .status(TransactionStatus.CREATED)
+                        .build());
+
+        if (transaction.getStatus() != TransactionStatus.CREATED) {
+            log.info("Transaction already applied for order {}, status: {}", order.getOrderNumber(), transaction.getStatus());
+            return;
+        }
+
+        OrderStatus previousStatus = order.getStatus();
+
+        if ("SUCCESS".equals(result.status())) {
+            transaction.setStatus(TransactionStatus.SUCCEEDED);
+            transaction.setPaymentReference(result.paymentReference());
+            order.setStatus(OrderStatus.PAID);
+        } else {
+            transaction.setStatus(TransactionStatus.FAILED);
+            transaction.setPaymentReference(result.paymentReference());
+            order.setStatus(OrderStatus.PAYMENT_FAILED);
+
+            for (OrderItem item : order.getOrderItems()) {
+                stockService.releaseStock(item.getProduct().getId(), item.getQuantity());
+            }
+
+            order.setStatus(OrderStatus.CANCELLED);
+        }
+
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .order(order)
+                .previousStatus(previousStatus)
+                .newStatus(order.getStatus())
+                .changedAt(LocalDateTime.now())
+                .build();
+        order.getStatusHistory().add(history);
+
+        transactionRepository.save(transaction);
+        orderRepository.save(order);
+
+        log.info("Payment result applied for order {}: {}", order.getOrderNumber(), order.getStatus());
+    }
+}
