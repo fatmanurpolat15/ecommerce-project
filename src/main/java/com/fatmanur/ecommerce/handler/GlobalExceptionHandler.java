@@ -6,6 +6,7 @@ import com.fatmanur.ecommerce.auth.exception.InvalidCredentialsException;
 import com.fatmanur.ecommerce.auth.exception.UserNotFoundException;
 import com.fatmanur.ecommerce.category.exception.CategoryAlreadyExistsException;
 import com.fatmanur.ecommerce.category.exception.CategoryNotFoundException;
+import com.fatmanur.ecommerce.order.exception.OrderNotCancellableException;
 import com.fatmanur.ecommerce.product.exception.ProductNotFoundException;
 import com.fatmanur.ecommerce.order.exception.InvalidOrderStatusTransitionException;
 import com.fatmanur.ecommerce.order.exception.OrderNotFoundException;
@@ -177,6 +178,14 @@ public class GlobalExceptionHandler {
                 LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
 
+    }
 
+    @ExceptionHandler(OrderNotCancellableException.class)
+    public ResponseEntity<ErrorResponse> handleOrderNotCancellable(OrderNotCancellableException ex) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage(),
+                LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 }
