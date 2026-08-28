@@ -22,7 +22,7 @@ public class MessageRelayService {
     private final OutboxRepository outboxRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
 
-    @Scheduled(fixedDelay = 5000)
+    @Scheduled(fixedDelay = 600000)
     @Transactional
     public void sendPendingMessages() {
         List<OutboxMessage> pendingMessages = outboxRepository.findByStatus(OutboxStatus.PENDING);
@@ -38,7 +38,10 @@ public class MessageRelayService {
                 message.setStatus(OutboxStatus.SENT);
                 message.setSentAt(LocalDateTime.now());
                 outboxRepository.save(message);
-                log.info("Outbox message sent: id={}, topic={}", message.getId(), message.getTopic());
+                log.info("Outbox message sent: id={}, topic={}, partition={}, offset={}",
+                        message.getId(), message.getTopic(),
+                        result.getRecordMetadata().partition(),
+                        result.getRecordMetadata().offset());
             } catch (Exception e) {
                 message.setStatus(OutboxStatus.FAILED);
                 outboxRepository.save(message);

@@ -10,6 +10,7 @@ import com.fatmanur.ecommerce.stock.service.StockService;
 import com.fatmanur.ecommerce.transaction.entity.OutboxMessage;
 import com.fatmanur.ecommerce.transaction.enums.OutboxStatus;
 import com.fatmanur.ecommerce.transaction.repository.OutboxRepository;
+import org.springframework.kafka.core.KafkaTemplate;
 import tools.jackson.databind.ObjectMapper;
 import com.fatmanur.ecommerce.transaction.dto.PaymentRequest;
 import com.fatmanur.ecommerce.transaction.dto.PaymentResult;
@@ -22,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +35,7 @@ public class TransactionService {
     private final StockService stockService;
     private final OutboxRepository outboxRepository;
     private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Transactional
     public void requestPayment(Order order) {
@@ -61,7 +64,17 @@ public class TransactionService {
                     .createdAt(LocalDateTime.now())
                     .build();
             outboxRepository.save(outboxMessage);
-            log.info("Payment request saved to outbox for order: {}", order.getOrderNumber());
+
+            try {
+                kafkaTemplate.send("payment.requests", order.getId().toString(), json)
+                        .get(10, TimeUnit.SECONDS);
+                outboxMessage.setStatus(OutboxStatus.SENT);
+                outboxMessage.setSentAt(LocalDateTime.now());
+                outboxRepository.save(outboxMessage);
+                log.info("Payment request sent to Kafka for order: {}", order.getOrderNumber());
+            } catch (Exception e) {
+                log.warn("Direct Kafka send failed for order: {}, poller will retry", order.getOrderNumber());
+            }
         } catch (Exception e) {
             log.error("Failed to serialize payment request for order: {}", order.getOrderNumber(), e);
         }
