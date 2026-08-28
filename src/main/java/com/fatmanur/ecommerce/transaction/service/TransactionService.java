@@ -7,6 +7,10 @@ import com.fatmanur.ecommerce.order.enums.OrderStatus;
 import com.fatmanur.ecommerce.order.exception.OrderNotFoundException;
 import com.fatmanur.ecommerce.order.repository.OrderRepository;
 import com.fatmanur.ecommerce.stock.service.StockService;
+import com.fatmanur.ecommerce.transaction.entity.OutboxMessage;
+import com.fatmanur.ecommerce.transaction.enums.OutboxStatus;
+import com.fatmanur.ecommerce.transaction.repository.OutboxRepository;
+import org.springframework.kafka.core.KafkaTemplate;
 import tools.jackson.databind.ObjectMapper;
 import com.fatmanur.ecommerce.transaction.dto.PaymentRequest;
 import com.fatmanur.ecommerce.transaction.dto.PaymentResult;
@@ -16,10 +20,10 @@ import com.fatmanur.ecommerce.transaction.repository.TransactionRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -29,8 +33,9 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final OrderRepository orderRepository;
     private final StockService stockService;
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final OutboxRepository outboxRepository;
     private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Transactional
     public void requestPayment(Order order) {
@@ -50,8 +55,26 @@ public class TransactionService {
 
         try {
             String json = objectMapper.writeValueAsString(request);
-            kafkaTemplate.send("payment.requests", order.getId().toString(), json);
-            log.info("Payment request sent to Kafka for order: {}", order.getOrderNumber());
+
+            OutboxMessage outboxMessage = OutboxMessage.builder()
+                    .topic("payment.requests")
+                    .messageKey(order.getId().toString())
+                    .payload(json)
+                    .status(OutboxStatus.PENDING)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            outboxRepository.save(outboxMessage);
+
+            try {
+                kafkaTemplate.send("payment.requests", order.getId().toString(), json)
+                        .get(10, TimeUnit.SECONDS);
+                outboxMessage.setStatus(OutboxStatus.SENT);
+                outboxMessage.setSentAt(LocalDateTime.now());
+                outboxRepository.save(outboxMessage);
+                log.info("Payment request sent to Kafka for order: {}", order.getOrderNumber());
+            } catch (Exception e) {
+                log.warn("Direct Kafka send failed for order: {}, poller will retry", order.getOrderNumber());
+            }
         } catch (Exception e) {
             log.error("Failed to serialize payment request for order: {}", order.getOrderNumber(), e);
         }
