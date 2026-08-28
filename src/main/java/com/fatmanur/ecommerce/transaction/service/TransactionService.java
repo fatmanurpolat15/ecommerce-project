@@ -97,6 +97,11 @@ public class TransactionService {
             return;
         }
 
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            log.info("Order {} is already CANCELLED, ignoring payment result: {}", order.getOrderNumber(), result.status());
+            return;
+        }
+
         OrderStatus previousStatus = order.getStatus();
 
         if ("SUCCESS".equals(result.status())) {
