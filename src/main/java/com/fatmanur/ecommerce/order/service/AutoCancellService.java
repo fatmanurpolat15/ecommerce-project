@@ -9,6 +9,7 @@ import com.fatmanur.ecommerce.stock.service.StockService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -24,10 +25,13 @@ public class AutoCancellService {
     private final OrderRepository orderRepository;
     private final StockService stockService;
 
+    @Value("${app.timezone}")
+    private String timezone;
+
     @Scheduled(fixedDelay = 600000)
     @Transactional
     public void cancelStuckOrders() {
-        LocalDateTime cutoff = LocalDateTime.now(ZoneId.of("Europe/Istanbul")).minusMinutes(20);
+        LocalDateTime cutoff = LocalDateTime.now(ZoneId.of(timezone)).minusMinutes(20);
         List<Order> stuckOrders = orderRepository.findByStatusAndCreatedAtBefore(OrderStatus.CREATED, cutoff);
 
         for (Order order : stuckOrders) {
@@ -35,11 +39,11 @@ public class AutoCancellService {
                 stockService.releaseStock(orderItem.getProduct().getId(), orderItem.getQuantity());
             }
 
-            order.setStatus(OrderStatus.CANCELLED);
+            order.setStatus(OrderStatus.NOT_COMPLETED);
             OrderStatusHistory history = OrderStatusHistory.builder()
                     .order(order)
                     .previousStatus(OrderStatus.CREATED)
-                    .newStatus(OrderStatus.CANCELLED)
+                    .newStatus(OrderStatus.NOT_COMPLETED)
                     .changedAt(LocalDateTime.now())
                     .build();
             order.getStatusHistory().add(history);

@@ -97,8 +97,8 @@ public class TransactionService {
             return;
         }
 
-        if (order.getStatus() == OrderStatus.CANCELLED) {
-            log.info("Order {} is already CANCELLED, ignoring payment result: {}", order.getOrderNumber(), result.status());
+        if (order.getStatus() == OrderStatus.NOT_COMPLETED) {
+            log.info("Order {} is already NOT_COMPLETED, ignoring payment result: {}", order.getOrderNumber(), result.status());
             return;
         }
 
