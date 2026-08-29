@@ -10,7 +10,6 @@ import com.fatmanur.ecommerce.order.exception.OrderNotCancellableException;
 import com.fatmanur.ecommerce.product.exception.ProductNotFoundException;
 import com.fatmanur.ecommerce.order.exception.InvalidOrderStatusTransitionException;
 import com.fatmanur.ecommerce.order.exception.OrderNotFoundException;
-import com.fatmanur.ecommerce.order.exception.OrderNotCancellableException;
 import com.fatmanur.ecommerce.transaction.exception.TransactionNotFoundException;
 import com.fatmanur.ecommerce.stock.exception.InsufficientStockException;
 import com.fatmanur.ecommerce.stock.exception.StockNotFoundException;
@@ -178,14 +177,5 @@ public class GlobalExceptionHandler {
                 LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
 
-    }
-
-    @ExceptionHandler(OrderNotCancellableException.class)
-    public ResponseEntity<ErrorResponse> handleOrderNotCancellable(OrderNotCancellableException ex) {
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                ex.getMessage(),
-                LocalDateTime.now());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 }

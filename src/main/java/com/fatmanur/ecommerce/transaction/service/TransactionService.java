@@ -97,6 +97,11 @@ public class TransactionService {
             return;
         }
 
+        if (order.getStatus() == OrderStatus.NOT_COMPLETED) {
+            log.info("Order {} is already NOT_COMPLETED, ignoring payment result: {}", order.getOrderNumber(), result.status());
+            return;
+        }
+
         OrderStatus previousStatus = order.getStatus();
 
         if ("SUCCESS".equals(result.status())) {

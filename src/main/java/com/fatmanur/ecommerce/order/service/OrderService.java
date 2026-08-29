@@ -44,7 +44,7 @@ public class OrderService {
     private final TransactionService transactionService;
 
     private static final Map<OrderStatus , Set<OrderStatus>> ALLOWED_STATUS_TRANSITIONS = Map.of(
-            OrderStatus.CREATED, Set.of(OrderStatus.PAID, OrderStatus.CANCELLED),
+            OrderStatus.CREATED, Set.of(OrderStatus.PAID, OrderStatus.CANCELLED , OrderStatus.NOT_COMPLETED),
             OrderStatus.PAID, Set.of(OrderStatus.FULFILLED),
             OrderStatus.FULFILLED, Set.of(),
             OrderStatus.PAYMENT_FAILED, Set.of(OrderStatus.CANCELLED),
