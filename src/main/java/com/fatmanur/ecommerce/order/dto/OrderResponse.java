@@ -14,6 +14,7 @@ public record OrderResponse(
     List<OrderItemResponse> items,
     BigDecimal totalPrice,
     LocalDateTime createdAt,
+    LocalDateTime paymentDeadline,
     List<StatusTimeLineItem> timeline
 ) {
 

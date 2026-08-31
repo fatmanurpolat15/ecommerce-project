@@ -13,6 +13,8 @@ import com.fatmanur.ecommerce.order.exception.InvalidOrderStatusTransitionExcept
 import com.fatmanur.ecommerce.order.exception.OrderNotCancellableException;
 import com.fatmanur.ecommerce.order.exception.OrderNotFoundException;
 import com.fatmanur.ecommerce.order.repository.OrderRepository;
+import com.fatmanur.ecommerce.stock.entity.Inventory;
+import com.fatmanur.ecommerce.stock.repository.InventoryRepository;
 import com.fatmanur.ecommerce.transaction.service.TransactionService;
 import com.fatmanur.ecommerce.product.entity.Product;
 import com.fatmanur.ecommerce.product.exception.ProductNotFoundException;
@@ -24,6 +26,8 @@ import com.fatmanur.ecommerce.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import org.springframework.beans.factory.annotation.Value;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -42,9 +46,14 @@ public class OrderService {
     private final StockService stockService;
     private final UserRepository userRepository;
     private final TransactionService transactionService;
+    private final InventoryRepository inventoryRepository;
+
+    @Value("${app.payment-window-minutes}")
+    private long paymentWindowMinutes;
 
     private static final Map<OrderStatus , Set<OrderStatus>> ALLOWED_STATUS_TRANSITIONS = Map.of(
-            OrderStatus.CREATED, Set.of(OrderStatus.PAID, OrderStatus.CANCELLED , OrderStatus.NOT_COMPLETED),
+            OrderStatus.CREATED, Set.of(OrderStatus.PAYMENT_PENDING, OrderStatus.CANCELLED , OrderStatus.NOT_COMPLETED),
+            OrderStatus.PAYMENT_PENDING, Set.of(OrderStatus.PAID, OrderStatus.CANCELLED, OrderStatus.NOT_COMPLETED),
             OrderStatus.PAID, Set.of(OrderStatus.FULFILLED),
             OrderStatus.FULFILLED, Set.of(),
             OrderStatus.PAYMENT_FAILED, Set.of(OrderStatus.CANCELLED),
@@ -77,7 +86,9 @@ public class OrderService {
                 .user(user)
                 .orderNumber(generateOrderNumber())
                 .userAddress(address)
+                .status(OrderStatus.PAYMENT_PENDING)
                 .totalPrice(BigDecimal.valueOf(cart.totalPrice()))
+                .paymentDeadline(LocalDateTime.now().plusMinutes(paymentWindowMinutes))
                 .build();
 
         for (var entry : cart.items().entrySet()) {
@@ -196,9 +207,41 @@ public class OrderService {
                 items,
                 order.getTotalPrice(),
                 order.getCreatedAt(),
+                order.getPaymentDeadline(),
                 statusTimeline
-
         );
+    }
+
+    @Transactional
+    public OrderResponse retryPayment(Long userId , Long orderId) {
+        Order order = orderRepository.findByIdAndUserId(orderId, userId)
+                .orElseThrow(() -> new OrderNotFoundException("Order not found"));
+
+        if (order.getStatus() != OrderStatus.NOT_COMPLETED) {
+            throw new InvalidOrderStatusTransitionException(order.getStatus().name(), OrderStatus.PAYMENT_PENDING.name());
+        }
+
+        order.setStatus(OrderStatus.PAYMENT_PENDING);
+        order.setPaymentDeadline(LocalDateTime.now().plusMinutes(paymentWindowMinutes));
+
+        for (OrderItem item : order.getOrderItems()) {
+            Inventory inventory = inventoryRepository.findByProductId(item.getProduct().getId()).orElse(null);
+            if (inventory == null || inventory.getReservedQuantity() < item.getQuantity()) {
+                stockService.reserveStock(item.getProduct().getId(), item.getQuantity());
+            }
+        }
+
+        OrderStatusHistory statusHistory = OrderStatusHistory.builder()
+                .order(order)
+                .previousStatus(OrderStatus.NOT_COMPLETED)
+                .newStatus(OrderStatus.PAYMENT_PENDING)
+                .changedAt(LocalDateTime.now())
+                .build();
+        order.getStatusHistory().add(statusHistory);
+
+        transactionService.requestPayment(order);
+
+        return toResponse(order);
     }
 
     private String generateOrderNumber() {
