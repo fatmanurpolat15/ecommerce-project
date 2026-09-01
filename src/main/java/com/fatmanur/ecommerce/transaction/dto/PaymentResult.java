@@ -1,11 +1,13 @@
 package com.fatmanur.ecommerce.transaction.dto;
 
+import com.fatmanur.ecommerce.transaction.enums.TransactionStatus;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record PaymentResult(
     Long orderId,
-    String status,
+    TransactionStatus status,
     String paymentReference,
     String reason,
     BigDecimal amount,

@@ -11,12 +11,14 @@ import com.fatmanur.ecommerce.stock.exception.StockNotFoundException;
 import com.fatmanur.ecommerce.stock.repository.InventoryRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class StockService {
 
     private final InventoryRepository inventoryRepository;
@@ -72,6 +74,22 @@ public class StockService {
 
     @CacheEvict(value = "stocks", key = "#productId")
     @Transactional
+    public void consumeStock(Long productId, int quantity) {
+        Inventory inventory = inventoryRepository.findByProductId(productId)
+                .orElseThrow(() -> new StockNotFoundException("Stock not found for product: " + productId));
+
+        if (inventory.getReservedQuantity() < quantity) {
+            log.warn("Not enough reserved stock to consume for product {}: reserved={}, needed={}",
+                    productId, inventory.getReservedQuantity(), quantity);
+            return;
+        }
+
+        inventory.setReservedQuantity(inventory.getReservedQuantity() - quantity);
+        inventoryRepository.save(inventory);
+    }
+
+    @CacheEvict(value = "stocks", key = "#productId")
+    @Transactional
     public void releaseStock(Long productId, int quantity) {
         Inventory inventory = inventoryRepository.findByProductId(productId)
                 .orElseThrow(() -> new StockNotFoundException("Stock not found for product: " + productId));
@@ -82,6 +100,16 @@ public class StockService {
 
         inventory.setAvailableQuantity(inventory.getAvailableQuantity() + quantity);
         inventory.setReservedQuantity(inventory.getReservedQuantity() - quantity);
+        inventoryRepository.save(inventory);
+    }
+
+    @CacheEvict(value = "stocks", key = "#productId")
+    @Transactional
+    public void reverseConsumeStock(Long productId, int quantity) {
+        Inventory inventory = inventoryRepository.findByProductId(productId)
+                .orElseThrow(() -> new StockNotFoundException("Stock not found for product: " + productId));
+
+        inventory.setAvailableQuantity(inventory.getAvailableQuantity() + quantity);
         inventoryRepository.save(inventory);
     }
 }
