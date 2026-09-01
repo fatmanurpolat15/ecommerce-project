@@ -102,4 +102,14 @@ public class StockService {
         inventory.setReservedQuantity(inventory.getReservedQuantity() - quantity);
         inventoryRepository.save(inventory);
     }
+
+    @CacheEvict(value = "stocks", key = "#productId")
+    @Transactional
+    public void reverseConsumeStock(Long productId, int quantity) {
+        Inventory inventory = inventoryRepository.findByProductId(productId)
+                .orElseThrow(() -> new StockNotFoundException("Stock not found for product: " + productId));
+
+        inventory.setAvailableQuantity(inventory.getAvailableQuantity() + quantity);
+        inventoryRepository.save(inventory);
+    }
 }

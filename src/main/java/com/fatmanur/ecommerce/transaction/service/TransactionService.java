@@ -16,6 +16,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import tools.jackson.databind.ObjectMapper;
 import com.fatmanur.ecommerce.transaction.dto.PaymentRequest;
 import com.fatmanur.ecommerce.transaction.dto.PaymentResult;
+import com.fatmanur.ecommerce.transaction.dto.TransactionResponse;
 import com.fatmanur.ecommerce.transaction.entity.Transaction;
 import com.fatmanur.ecommerce.transaction.enums.TransactionStatus;
 import com.fatmanur.ecommerce.transaction.repository.TransactionRepository;
@@ -28,6 +29,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -53,6 +55,17 @@ public class TransactionService {
             log.info("Order {} already has a pending transaction, skipping.", order.getOrderNumber());
             return;
         }
+
+        OrderStatus previousStatus = order.getStatus();
+        order.setStatus(OrderStatus.PAYMENT_PENDING);
+
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .order(order)
+                .previousStatus(previousStatus)
+                .newStatus(OrderStatus.PAYMENT_PENDING)
+                .changedAt(LocalDateTime.now())
+                .build();
+        order.getStatusHistory().add(history);
 
         Transaction transaction = Transaction.builder()
                 .order(order)
@@ -116,14 +129,14 @@ public class TransactionService {
             return;
         }
 
-        if (order.getStatus() == OrderStatus.NOT_COMPLETED && "FAILED".equals(result.status())) {
+        if (order.getStatus() == OrderStatus.NOT_COMPLETED && result.status() == TransactionStatus.FAILED) {
             log.info("Order {} is already NOT_COMPLETED, ignoring FAILED result: {}", order.getOrderNumber(), result.paymentReference());
             return;
         }
 
         OrderStatus previousStatus = order.getStatus();
 
-        if ("SUCCESS".equals(result.status())) {
+        if (result.status() == TransactionStatus.SUCCEEDED) {
             boolean alreadySucceeded = transactionRepository.findAllByOrderIdOrderByCreatedAtDesc(order.getId())
                     .stream()
                     .anyMatch(t -> t.getStatus() == TransactionStatus.SUCCEEDED);
@@ -162,5 +175,20 @@ public class TransactionService {
         orderRepository.save(order);
 
         log.info("Payment result applied for order {}: {}", order.getOrderNumber(), order.getStatus());
+    }
+
+    public List<TransactionResponse> getTransactionsByOrderId(Long orderId) {
+        return transactionRepository.findAllByOrderIdOrderByCreatedAtDesc(orderId)
+                .stream()
+                .map(t -> new TransactionResponse(
+                        t.getId(),
+                        t.getOrder().getId(),
+                        t.getAmount(),
+                        t.getStatus(),
+                        t.getPaymentReference(),
+                        t.getCreatedAt(),
+                        t.getUpdatedAt()
+                ))
+                .toList();
     }
 }

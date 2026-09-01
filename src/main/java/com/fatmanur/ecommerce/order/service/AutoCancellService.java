@@ -45,6 +45,13 @@ public class AutoCancellService {
     public void cancelStuckOrders() {
         LocalDateTime now = LocalDateTime.now(ZoneId.of(timezone));
 
+        List<Order> createdOrders = orderRepository.findByStatus(OrderStatus.CREATED);
+        for (Order order : createdOrders) {
+            transactionService.requestPayment(order);
+            orderRepository.save(order);
+            log.info("Order {} transitioning from CREATED to PAYMENT_PENDING.", order.getOrderNumber());
+        }
+
         List<Order> stuckOrders = orderRepository.findByStatusAndPaymentDeadlineBefore(OrderStatus.PAYMENT_PENDING, now);
 
         for (Order order : stuckOrders) {
@@ -90,17 +97,8 @@ public class AutoCancellService {
                 }
             }
 
-            order.setStatus(OrderStatus.CANCELLED);
-            OrderStatusHistory history = OrderStatusHistory.builder()
-                    .order(order)
-                    .previousStatus(OrderStatus.NOT_COMPLETED)
-                    .newStatus(OrderStatus.CANCELLED)
-                    .changedAt(LocalDateTime.now())
-                    .build();
-            order.getStatusHistory().add(history);
-
             orderRepository.save(order);
-            log.info("Order {} stock released and cancelled after 30 min grace period.", order.getOrderNumber());
+            log.info("Order {} stock released after 30 min grace period. Status remains NOT_COMPLETED.", order.getOrderNumber());
         }
     }
 

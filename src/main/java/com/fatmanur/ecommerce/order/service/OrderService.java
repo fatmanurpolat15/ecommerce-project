@@ -52,9 +52,9 @@ public class OrderService {
     private long paymentWindowMinutes;
 
     private static final Map<OrderStatus , Set<OrderStatus>> ALLOWED_STATUS_TRANSITIONS = Map.of(
-            OrderStatus.CREATED, Set.of(OrderStatus.PAYMENT_PENDING, OrderStatus.CANCELLED , OrderStatus.NOT_COMPLETED),
+            OrderStatus.CREATED, Set.of(OrderStatus.PAYMENT_PENDING, OrderStatus.CANCELLED),
             OrderStatus.PAYMENT_PENDING, Set.of(OrderStatus.PAID, OrderStatus.CANCELLED, OrderStatus.NOT_COMPLETED),
-            OrderStatus.PAID, Set.of(OrderStatus.FULFILLED),
+            OrderStatus.PAID, Set.of(OrderStatus.FULFILLED , OrderStatus.CANCELLED),
             OrderStatus.FULFILLED, Set.of(),
             OrderStatus.PAYMENT_FAILED, Set.of(OrderStatus.CANCELLED),
             OrderStatus.CANCELLED, Set.of()
@@ -86,7 +86,7 @@ public class OrderService {
                 .user(user)
                 .orderNumber(generateOrderNumber())
                 .userAddress(address)
-                .status(OrderStatus.PAYMENT_PENDING)
+                .status(OrderStatus.CREATED)
                 .totalPrice(BigDecimal.valueOf(cart.totalPrice()))
                 .paymentDeadline(LocalDateTime.now().plusMinutes(paymentWindowMinutes))
                 .build();
@@ -108,7 +108,6 @@ public class OrderService {
         }
 
         Order savedOrder = orderRepository.save(order);
-        transactionService.requestPayment(savedOrder);
         cartService.clearCart(userId);
 
         return toResponse(savedOrder);
@@ -154,12 +153,21 @@ public class OrderService {
         Order order = orderRepository.findByIdAndUserId(orderId, userId)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found"));
 
-        if (order.getStatus() != OrderStatus.CREATED) {
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.FULFILLED) {
             throw new OrderNotCancellableException("Order cannot be cancelled in its current status: " + order.getStatus().name());
         }
 
-        for (OrderItem item : order.getOrderItems()) {
-            stockService.releaseStock(item.getProduct().getId(), item.getQuantity());
+        if(order.getStatus() == OrderStatus.PAID) {
+            for(OrderItem item : order.getOrderItems()) {
+                stockService.reverseConsumeStock(item.getProduct().getId(), item.getQuantity());
+
+            }
+        }
+
+        if(order.getStatus()==OrderStatus.CANCELLED || order.getStatus() == OrderStatus.PAYMENT_PENDING) {
+            for (OrderItem item : order.getOrderItems()) {
+                stockService.releaseStock(item.getProduct().getId(), item.getQuantity());
+            }
         }
 
         OrderStatus previousStatus = order.getStatus();
