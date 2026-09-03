@@ -8,4 +8,5 @@ import java.util.Optional;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
     List<Transaction> findAllByOrderIdOrderByCreatedAtDesc(Long orderId);
+    List<Transaction> findAllByOrderByCreatedAtDesc();
 }

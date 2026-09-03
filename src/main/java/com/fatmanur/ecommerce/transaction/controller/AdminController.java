@@ -18,4 +18,9 @@ public class AdminController {
     public List<TransactionResponse> getPaymentsByOrderId(@PathVariable Long orderId) {
         return transactionService.getTransactionsByOrderId(orderId);
     }
+
+    @GetMapping("/payments")
+    public List<TransactionResponse> getAllPayments() {
+        return transactionService.getAllTransactions();
+    }
 }
