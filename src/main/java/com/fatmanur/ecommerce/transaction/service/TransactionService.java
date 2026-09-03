@@ -191,4 +191,19 @@ public class TransactionService {
                 ))
                 .toList();
     }
+
+    public List<TransactionResponse> getAllTransactions() {
+        return transactionRepository.findAllByOrderByCreatedAtDesc()
+                .stream()
+                .map(t -> new TransactionResponse(
+                        t.getId(),
+                        t.getOrder().getId(),
+                        t.getAmount(),
+                        t.getStatus(),
+                        t.getPaymentReference(),
+                        t.getCreatedAt(),
+                        t.getUpdatedAt()
+                ))
+                .toList();
+    }
 }
