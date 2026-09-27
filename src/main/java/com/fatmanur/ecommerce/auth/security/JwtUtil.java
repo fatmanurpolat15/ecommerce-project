@@ -14,31 +14,28 @@ import java.util.Date;
 public class JwtUtil {
 
     private final SecretKey key;
-    private final long expirationMs;
+    private final long accessExpirationMs;
 
     public JwtUtil(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration-ms}") long expirationMs) {
+            @Value("${jwt.access-expiration-ms}") long accessExpirationMs
+    ) {
         this.key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
-        this.expirationMs = expirationMs;
+        this.accessExpirationMs = accessExpirationMs;
     }
 
-    public String generateToken(String email, String role) {
+    public String generateAccessToken(String email, String role) {
         return Jwts.builder()
                 .subject(email)
                 .claim("role", role)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .expiration(new Date(System.currentTimeMillis() + accessExpirationMs))
                 .signWith(key)
                 .compact();
     }
 
     public String extractEmail(String token) {
         return extractClaims(token).getSubject();
-    }
-
-    public String extractRole(String token) {
-        return extractClaims(token).get("role", String.class);
     }
 
     public boolean isTokenValid(String token) {
