@@ -27,6 +27,14 @@ public class ProductController {
         return ResponseEntity.ok(productService.create(request));
     }
 
+    @GetMapping
+    public ResponseEntity<Page<ProductResponse>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        return ResponseEntity.ok(productService.getAll(pageable));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getById(id));
