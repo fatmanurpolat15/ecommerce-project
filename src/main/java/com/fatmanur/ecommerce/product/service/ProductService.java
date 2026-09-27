@@ -48,6 +48,10 @@ public class ProductService {
         return toResponse(product);
     }
 
+    public Page<ProductResponse> getAll(Pageable pageable) {
+        return productRepository.findAllByDeletedFalse(pageable).map(this::toResponse);
+    }
+
     public Page<ProductResponse> getByCategoryId(Long categoryId, Pageable pageable) {
         return productRepository.findAllByCategoryIdAndDeletedFalse(categoryId, pageable).map(this::toResponse);
     }
