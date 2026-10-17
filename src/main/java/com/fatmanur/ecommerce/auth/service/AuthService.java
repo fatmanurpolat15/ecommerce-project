@@ -121,6 +121,7 @@ public class AuthService {
         );
 
         return new AuthSession(
+                user.getId(),
                 accessToken,
                 rawRefreshToken,
                 user.getEmail(),

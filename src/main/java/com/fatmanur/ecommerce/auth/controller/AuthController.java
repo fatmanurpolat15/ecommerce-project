@@ -50,6 +50,7 @@ public class AuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookieService.createRefreshCookie(session.refreshToken()).toString())
                 .body(new LoginResponse(
+                        session.id(),
                         session.token(),
                         session.email(),
                         session.name(),
