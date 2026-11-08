@@ -19,4 +19,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Page<Product> findAllByNameContainingIgnoreCaseAndDeletedFalse(String keyword, Pageable pageable);
 
     Page<Product> findAllByPriceBetweenAndDeletedFalse(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
+
+    Page<Product> findAllByCategoryIdAndPriceBetweenAndDeletedFalse(Long categoryId, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
 }
