@@ -62,10 +62,11 @@ public class ProductController {
     public ResponseEntity<Page<ProductResponse>> getByPriceRange(
             @RequestParam BigDecimal minPrice,
             @RequestParam BigDecimal maxPrice,
+            @RequestParam(required = false) Long categoryId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        return ResponseEntity.ok(productService.getByPriceRange(minPrice, maxPrice, pageable));
+        return ResponseEntity.ok(productService.getByPriceRange(minPrice, maxPrice, categoryId, pageable));
     }
 
     @PutMapping("/{id}")

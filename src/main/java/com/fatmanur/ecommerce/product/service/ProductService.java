@@ -60,7 +60,10 @@ public class ProductService {
         return productRepository.findAllByNameContainingIgnoreCaseAndDeletedFalse(keyword, pageable).map(this::toResponse);
     }
 
-    public Page<ProductResponse> getByPriceRange(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
+    public Page<ProductResponse> getByPriceRange(BigDecimal minPrice, BigDecimal maxPrice, Long categoryId, Pageable pageable) {
+        if (categoryId != null) {
+            return productRepository.findAllByCategoryIdAndPriceBetweenAndDeletedFalse(categoryId, minPrice, maxPrice, pageable).map(this::toResponse);
+        }
         return productRepository.findAllByPriceBetweenAndDeletedFalse(minPrice, maxPrice, pageable).map(this::toResponse);
     }
 
