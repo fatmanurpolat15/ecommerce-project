@@ -14,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @RestController
 @RequestMapping("${api.base-uri}/products")
@@ -29,10 +30,12 @@ public class ProductController {
 
     @GetMapping
     public ResponseEntity<Page<ProductResponse>> getAll(
+            @RequestParam(required = false) List<Long> categoryIds,
+            @RequestParam(required = false) Long categoryId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        return ResponseEntity.ok(productService.getAll(pageable));
+        return ResponseEntity.ok(productService.getAll(categoryIds, categoryId, pageable));
     }
 
     @GetMapping("/{id}")
@@ -62,11 +65,12 @@ public class ProductController {
     public ResponseEntity<Page<ProductResponse>> getByPriceRange(
             @RequestParam BigDecimal minPrice,
             @RequestParam BigDecimal maxPrice,
+            @RequestParam(required = false) List<Long> categoryIds,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        return ResponseEntity.ok(productService.getByPriceRange(minPrice, maxPrice, categoryId, pageable));
+        return ResponseEntity.ok(productService.getByPriceRange(minPrice, maxPrice, categoryIds, categoryId, pageable));
     }
 
     @PutMapping("/{id}")

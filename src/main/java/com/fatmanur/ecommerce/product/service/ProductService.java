@@ -17,6 +17,7 @@ import org.springframework.cache.annotation.CacheEvict;
 
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Service
 @AllArgsConstructor
@@ -52,19 +53,46 @@ public class ProductService {
         return productRepository.findAllByDeletedFalse(pageable).map(this::toResponse);
     }
 
+    public Page<ProductResponse> getAll(List<Long> categoryIds, Long categoryId, Pageable pageable) {
+        List<Long> targetCategoryIds = resolveCategoryIds(categoryIds, categoryId);
+        if (targetCategoryIds != null) {
+            return productRepository.findAllByCategoryIdInAndDeletedFalse(targetCategoryIds, pageable).map(this::toResponse);
+        }
+        return getAll(pageable);
+    }
+
     public Page<ProductResponse> getByCategoryId(Long categoryId, Pageable pageable) {
         return productRepository.findAllByCategoryIdAndDeletedFalse(categoryId, pageable).map(this::toResponse);
+    }
+
+    public Page<ProductResponse> getByCategoryIds(List<Long> categoryIds, Pageable pageable) {
+        return getAll(categoryIds, null, pageable);
     }
 
     public Page<ProductResponse> searchByKeyword(String keyword, Pageable pageable) {
         return productRepository.findAllByNameContainingIgnoreCaseAndDeletedFalse(keyword, pageable).map(this::toResponse);
     }
 
-    public Page<ProductResponse> getByPriceRange(BigDecimal minPrice, BigDecimal maxPrice, Long categoryId, Pageable pageable) {
-        if (categoryId != null) {
-            return productRepository.findAllByCategoryIdAndPriceBetweenAndDeletedFalse(categoryId, minPrice, maxPrice, pageable).map(this::toResponse);
+    public Page<ProductResponse> getByPriceRange(BigDecimal minPrice, BigDecimal maxPrice, List<Long> categoryIds, Long categoryId, Pageable pageable) {
+        List<Long> targetCategoryIds = resolveCategoryIds(categoryIds, categoryId);
+        if (targetCategoryIds != null) {
+            return productRepository.findAllByCategoryIdInAndPriceBetweenAndDeletedFalse(targetCategoryIds, minPrice, maxPrice, pageable).map(this::toResponse);
         }
         return productRepository.findAllByPriceBetweenAndDeletedFalse(minPrice, maxPrice, pageable).map(this::toResponse);
+    }
+
+    public Page<ProductResponse> getByPriceRange(BigDecimal minPrice, BigDecimal maxPrice, List<Long> categoryIds, Pageable pageable) {
+        return getByPriceRange(minPrice, maxPrice, categoryIds, null, pageable);
+    }
+
+    private List<Long> resolveCategoryIds(List<Long> categoryIds, Long categoryId) {
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            return categoryIds;
+        }
+        if (categoryId != null) {
+            return List.of(categoryId);
+        }
+        return null;
     }
 
     @CacheEvict(value = "products", key = "#id")
